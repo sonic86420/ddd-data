@@ -246,23 +246,23 @@
 
     <script src="data.js"></script>
     <script>
-        let allData = [];
-        let filteredData = [];
-        let currentPage = 1;
-        const pageSize = 50;
-        
-        // 从 data.js 加载数据
-        const rawData = typeof DRUG_DATA !== 'undefined' ? DRUG_DATA : [];
-        console.log('Loaded', rawData.length, 'drugs');
-        
-        function init() {
-            if (rawData.length === 0) {
-                document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" class="no-results">数据加载失败，请刷新页面</td></tr>';
-                return;
-            }
+        // 等待 data.js 加载完成后初始化
+        window.onload = function() {
+            const rawData = typeof DRUG_DATA !== 'undefined' ? DRUG_DATA : [];
+            console.log('Loaded', rawData.length, 'drugs');
             
-            // 处理数据
-            allData = rawData.map((item, index) => ({
+            let allData = [];
+            let filteredData = [];
+            let currentPage = 1;
+            const pageSize = 50;
+            
+            function init() {
+                if (rawData.length === 0) {
+                    document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" class="no-results">数据加载失败，请刷新页面</td></tr>';
+                    return;
+                }
+                
+                allData = rawData.map((item, index) => ({
                 ...item,
                 index: index + 1
             }));
@@ -347,12 +347,12 @@
         function goPage(page) {
             currentPage = page;
             renderTable();
-            // 滚动到顶部
             document.querySelector('.table-container').scrollIntoView({ behavior: 'smooth' });
         }
         
         // 初始化
         init();
+        };
     </script>
 </body>
 </html>
