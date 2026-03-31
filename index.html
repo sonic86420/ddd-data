@@ -246,9 +246,17 @@
 
     <script src="data.js"></script>
     <script>
-        // 等待 data.js 加载完成后初始化
-        window.onload = function() {
-            const rawData = typeof DRUG_DATA !== 'undefined' ? DRUG_DATA : [];
+        // 检查数据是否加载
+        function checkData() {
+            if (typeof DRUG_DATA !== 'undefined' && DRUG_DATA.length > 0) {
+                initApp(DRUG_DATA);
+            } else {
+                // 数据未加载，延迟重试
+                setTimeout(checkData, 100);
+            }
+        }
+        
+        function initApp(rawData) {
             console.log('Loaded', rawData.length, 'drugs');
             
             let allData = [];
@@ -257,102 +265,98 @@
             const pageSize = 50;
             
             function init() {
-                if (rawData.length === 0) {
-                    document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" class="no-results">数据加载失败，请刷新页面</td></tr>';
+                allData = rawData.map((item, index) => ({
+                    ...item,
+                    index: index + 1
+                }));
+                
+                filteredData = [...allData];
+                updateStats();
+                renderTable();
+            }
+            
+            function updateStats() {
+                document.getElementById('totalCount').textContent = allData.length;
+                document.getElementById('oralCount').textContent = allData.filter(d => d.route === 'O').length;
+                document.getElementById('injectCount').textContent = allData.filter(d => d.route === 'P').length;
+            }
+            
+            function filterData() {
+                const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+                
+                if (!keyword) {
+                    filteredData = [...allData];
+                } else {
+                    filteredData = allData.filter(item => 
+                        item.drug.toLowerCase().includes(keyword) || 
+                        item.generic.toLowerCase().includes(keyword)
+                    );
+                }
+                
+                currentPage = 1;
+                renderTable();
+            }
+            
+            function renderTable() {
+                const tbody = document.getElementById('tableBody');
+                const start = (currentPage - 1) * pageSize;
+                const end = start + pageSize;
+                const pageData = filteredData.slice(start, end);
+                
+                if (pageData.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="no-results">没有找到匹配的药品</td></tr>';
+                    document.getElementById('pagination').innerHTML = '';
                     return;
                 }
                 
-                allData = rawData.map((item, index) => ({
-                ...item,
-                index: index + 1
-            }));
-            
-            filteredData = [...allData];
-            updateStats();
-            renderTable();
-        }
-        
-        function updateStats() {
-            document.getElementById('totalCount').textContent = allData.length;
-            document.getElementById('oralCount').textContent = allData.filter(d => d.route === 'O').length;
-            document.getElementById('injectCount').textContent = allData.filter(d => d.route === 'P').length;
-        }
-        
-        function filterData() {
-            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-            
-            if (!keyword) {
-                filteredData = [...allData];
-            } else {
-                filteredData = allData.filter(item => 
-                    item.drug.toLowerCase().includes(keyword) || 
-                    item.generic.toLowerCase().includes(keyword)
-                );
+                let html = pageData.map(item => {
+                    const isNote = item.ddd.includes('*');
+                    const dddDisplay = item.ddd.replace('*', '') + (isNote ? ' <span class="note">*</span>' : '');
+                    return '<tr>' +
+                        '<td>' + item.index + '</td>' +
+                        '<td>' + item.drug + '</td>' +
+                        '<td>' + item.generic + '</td>' +
+                        '<td><span class="route ' + item.route + '">' + (item.route === 'O' ? '口服' : '注射') + '</span></td>' +
+                        '<td class="ddd-value">' + dddDisplay + '</td>' +
+                    '</tr>';
+                }).join('');
+                
+                tbody.innerHTML = html;
+                renderPagination();
             }
             
-            currentPage = 1;
-            renderTable();
-        }
-        
-        function renderTable() {
-            const tbody = document.getElementById('tableBody');
-            const start = (currentPage - 1) * pageSize;
-            const end = start + pageSize;
-            const pageData = filteredData.slice(start, end);
-            
-            if (pageData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="no-results">没有找到匹配的药品</td></tr>';
-                document.getElementById('pagination').innerHTML = '';
-                return;
+            function renderPagination() {
+                const totalPages = Math.ceil(filteredData.length / pageSize);
+                const pagination = document.getElementById('pagination');
+                
+                if (totalPages <= 1) {
+                    pagination.innerHTML = '';
+                    return;
+                }
+                
+                let html = '<button ' + (currentPage === 1 ? 'disabled' : '') + ' onclick="goPage(1)">首页</button>' +
+                    '<button ' + (currentPage === 1 ? 'disabled' : '') + ' onclick="goPage(' + (currentPage - 1) + ')">上一页</button>' +
+                    '<span>第 ' + currentPage + ' / ' + totalPages + ' 页</span>' +
+                    '<button ' + (currentPage === totalPages ? 'disabled' : '') + ' onclick="goPage(' + (currentPage + 1) + ')">下一页</button>' +
+                    '<button ' + (currentPage === totalPages ? 'disabled' : '') + ' onclick="goPage(' + totalPages + ')">末页</button>';
+                
+                pagination.innerHTML = html;
             }
             
-            let html = pageData.map(item => {
-                const isNote = item.ddd.includes('*');
-                const dddDisplay = item.ddd.replace('*', '') + (isNote ? ' <span class="note">*</span>' : '');
-                return \`
-                    <tr>
-                        <td>\${item.index}</td>
-                        <td>\${item.drug}</td>
-                        <td>\${item.generic}</td>
-                        <td><span class="route \${item.route}">\${item.route === 'O' ? '口服' : '注射'}</span></td>
-                        <td class="ddd-value">\${dddDisplay}</td>
-                    </tr>
-                \`;
-            }).join('');
+            window.goPage = function(page) {
+                currentPage = page;
+                renderTable();
+                document.querySelector('.table-container').scrollIntoView({ behavior: 'smooth' });
+            };
             
-            tbody.innerHTML = html;
-            renderPagination();
+            window.filterData = filterData;
+            
+            // 初始化
+            init();
         }
         
-        function renderPagination() {
-            const totalPages = Math.ceil(filteredData.length / pageSize);
-            const pagination = document.getElementById('pagination');
-            
-            if (totalPages <= 1) {
-                pagination.innerHTML = '';
-                return;
-            }
-            
-            let html = \`
-                <button \${currentPage === 1 ? 'disabled' : ''} onclick="goPage(1)">首页</button>
-                <button \${currentPage === 1 ? 'disabled' : ''} onclick="goPage(\${currentPage - 1})">上一页</button>
-                <span>第 \${currentPage} / \${totalPages} 页</span>
-                <button \${currentPage === totalPages ? 'disabled' : ''} onclick="goPage(\${currentPage + 1})">下一页</button>
-                <button \${currentPage === totalPages ? 'disabled' : ''} onclick="goPage(\${totalPages})">末页</button>
-            \`;
-            
-            pagination.innerHTML = html;
-        }
-        
-        function goPage(page) {
-            currentPage = page;
-            renderTable();
-            document.querySelector('.table-container').scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        // 初始化
-        init();
-        };
+        // 启动检查
+        checkData();
     </script>
 </body>
 </html>
