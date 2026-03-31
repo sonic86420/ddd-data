@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test DDD Data</title>
+</head>
+<body>
+    <h1>Testing DDD Data Loading</h1>
+    <div id="status">Loading...</div>
+    <script src="data.js"></script>
+    <script>
+        document.getElementById('status').textContent = 'DRUG_DATA defined: ' + (typeof DRUG_DATA !== 'undefined');
+        if (typeof DRUG_DATA !== 'undefined') {
+            document.getElementById('status').textContent = 'Loaded ' + DRUG_DATA.length + ' drugs';
+            console.log(DRUG_DATA);
+        } else {
+            document.getElementById('status').textContent = 'ERROR: DRUG_DATA not defined';
+        }
+    </script>
+</body>
+</html>
