@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>临床药学每日工作量与交班上报系统（多人共享版）</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .header p {
+            color: #64748b;
+            margin: 0;
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .btn {
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            font-size: 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-blue { background-color: #3498db; }
+        .btn-blue:hover { background-color: #2980b9; }
+        .btn-green { background-color: #27ae60; }
+        .btn-green:hover { background-color: #219150; }
+        .btn-orange { background-color: #e67e22; }
+        .btn-orange:hover { background-color: #d35400; }
+        .btn-red { background-color: #e74c3c; }
+        .btn-red:hover { background-color: #c0392b; }
+        .btn-teal { background-color: #16a085; }
+        .btn-teal:hover { background-color: #13866f; }
+
+        .date-picker-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+        }
+        .date-picker-group input {
+            padding: 8px;
+            font-size: 15px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+        }
+
+        .status-bar {
+            width: 100%;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #27ae60;
+            height: 20px;
+            font-weight: bold;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            display: none;
+        }
+        .table-container.active {
+            display: block;
+        }
+        .table-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #1e40af;
+            border-left: 4px solid #1e40af;
+            padding-left: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            min-width: 1300px;
+        }
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 8px 6px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        th {
+            background-color: #e2e8f0;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        .text-heavy-table th, .text-heavy-table td {
+            min-width: 180px;
+        }
+        .text-heavy-table th:first-child, .text-heavy-table td:first-child {
+            min-width: 80px;
+        }
+        .text-heavy-table th:nth-child(2), .text-heavy-table td:nth-child(2),
+        .text-heavy-table th:nth-child(3), .text-heavy-table td:nth-child(3),
+        .text-heavy-table th:nth-child(4), .text-heavy-table td:nth-child(4) {
+            min-width: 220px;
+        }
+
+        td[contenteditable="true"]:focus {
+            outline: 2px solid #3498db;
+            background-color: #f0fdf4;
+        }
+        td[contenteditable="true"] {
+            background-color: #fff;
+            cursor: text;
+            text-align: left;
+            padding: 8px;
+        }
+        td[contenteditable="true"]:empty::before {
+            content: attr(data-placeholder);
+            color: #94a3b8;
+            font-size: 12px;
+            text-align: left;
+        }
+        .weekend-alert {
+            color: #e74c3c;
+            font-weight: bold;
+            display: none;
+            margin-top: 10px;
+            text-align: center;
+            width: 100%;
+        }
+        .file-import-label {
+            display: inline-block;
+            padding: 10px 18px;
+            font-size: 15px;
+            color: white;
+            background-color: #8e44ad;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .file-import-label:hover {
+            background-color: #732d91;
+        }
+        #fileInput {
+            display: none;
+        }
+
+        /* 云端同步提示横幅 */
+        .setup-banner {
+            display: none;
+            background: #fff8e1;
+            border: 1px solid #f0c14b;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.9;
+            color: #6d4c00;
+        }
+        .setup-banner ol {
+            margin: 8px 0 0 20px;
+            padding: 0;
+        }
+        .setup-banner code {
+            background: #f1f5f9;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        /* 单元格保存成功闪烁 */
+        @keyframes cellFlash {
+            0% { background-color: #d4f7d4; }
+            100% { background-color: #fff; }
+        }
+        td.cell-saved {
+            animation: cellFlash 1.2s ease-out;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 未配置 Token 时的部署指引横幅 -->
+    <div class="setup-banner" id="setupBanner">
+        <strong>⚠️ 尚未配置云端同步 Token，当前数据仅保存在本机浏览器，其他人看不到！</strong><br>
+        部署前请完成以下 3 步（一次性操作）：
+        <ol>
+            <li>用 GitHub 账号新建一个<strong>专用数据仓库</strong>（如 <code>clinical-workload-data</code>，私有/公开均可）。</li>
+            <li>GitHub 右上角头像 → <code>Settings</code> → <code>Developer settings</code> → <code>Fine-grained tokens</code> → <code>Generate new token</code>：<br>
+                ① Repository access 选 <strong>Only select repositories</strong>，勾选上面的数据仓库；<br>
+                ② Permissions → Repository permissions → <strong>Contents</strong> 设为 <strong>Read and write</strong>；<br>
+                ③ 生成并复制 Token（记好有效期，到期需更换）。</li>
+            <li>用记事本打开本文件，搜索 <code>CLOUD_CONFIG</code>，把 Token 粘贴到 <code>token: "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"</code> 的引号内，保存后重新上传到你的 GitHub Pages 仓库。</li>
+        </ol>
+        提示：该 Token 只授权这一个数据仓库；若泄露可随时在 GitHub 上吊销更换。全部科室成员通过同一份数据文件共享填报内容。
+    </div>
+
+    <div class="header">
+        <h1>临床药学每日工作量与交班上报系统</h1>
+        <p>上报人员：滕智远，胡珺，蒲婷婷，万亭池，程瑛，朱骥，朱丹，袁叶萍</p>
+    </div>
+
+    <div class="toolbar">
+        <div class="date-picker-group">
+            <label for="reportDate">选择日期：</label>
+            <input type="date" id="reportDate" min="2026-09-28" onchange="onDateChange()">
+        </div>
+        <button class="btn btn-teal" onclick="refreshFromCloud(true)">🔄 刷新云端数据</button>
+        <button class="btn btn-orange" onclick="generateSummary()">📊 生成汇总统计</button>
+        <button class="btn btn-green" onclick="exportTable('detail')">📥 导出当前明细</button>
+        <button class="btn btn-green" onclick="exportTable('summary')">📥 导出汇总统计</button>
+        <button class="btn btn-blue" onclick="exportBackup()">💾 导出全量备份</button>
+        <label class="file-import-label" for="fileInput">📂 导入数据恢复</label>
+        <input type="file" id="fileInput" accept=".json" onchange="importBackup(event)">
+        <button class="btn btn-red" onclick="clearCurrentDate()">🗑️ 清空当前日期</button>
+        <div class="status-bar" id="saveStatus">⏳ 正在连接云端…</div>
+        <div class="weekend-alert" id="weekendAlert">⚠️ 提示：您选择的日期是周末，请确认是否确实需要上报。</div>
+    </div>
+
+    <!-- 表一：工作量明细 -->
+    <div class="table-container" id="detailContainer">
+        <div class="table-title" id="detailTitle">每日工作量明细表</div>
+        <table id="detailTable">
+            <thead>
+                <tr>
+                    <th rowspan="2">汇报日期</th>
+                    <th rowspan="2">星期</th>
+                    <th rowspan="2">上报人员</th>
+                    <th colspan="6">工作量</th>
+                </tr>
+                <tr>
+                    <th>查房</th>
+                    <th>医嘱点评</th>
+                    <th>会诊</th>
+                    <th>药物咨询</th>
+                    <th>ADR上报数量</th>
+                    <th>全院会诊</th>
+                </tr>
+            </thead>
+            <tbody id="detailTbody">
+                <!-- 动态生成 -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 表二：交班补充上报 -->
+    <div class="table-container" id="supplementContainer">
+        <div class="table-title" id="supplementTitle">每日交班补充上报表</div>
+        <table class="text-heavy-table" id="supplementTable">
+            <thead>
+                <tr>
+                    <th>上报人员</th>
+                    <th>投诉、咨询纠纷（患者/临床科室投诉、咨询事件，处理结果）：有则填写，无则不用填写，如有，详细描述。</th>
+                    <th>安全隐患（调剂差错隐患、设备故障等）由每月安全员填写：有则填写，无则不用填写，如有，详细描述。</th>
+                    <th>昨日拦截的不合理处方（超剂量、配伍禁忌、重复用药、遴选不适宜，典型案例简述）由前置审方老师填写：有则填写，无则不用填写，如有，按上述种类，填写数量，需详细描述的因详细描述。</th>
+                    <th>不良反应ADR（新上报严重不良反应，简要情况、处置）：有则填写，无则不用填写。</th>
+                    <th>重点专项工作进展：有则填写，无则不用填写。</th>
+                    <th>需院领导/其他部门协调解决事项：有则填写，无则不用填写，如有，详细描述。</th>
+                    <th>其他：有则填写，无则不用填写，如有，详细描述。</th>
+                    <th>今日重点工作：有则填写，无则不用填写，如有，详细描述。</th>
+                </tr>
+            </thead>
+            <tbody id="supplementTbody">
+                <!-- 动态生成 -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 汇总统计表格 -->
+    <div class="table-container" id="summaryContainer">
+        <div class="table-title">全科工作量汇总统计表（截止当前所有已填报日期）</div>
+        <table id="summaryTable">
+            <thead>
+                <tr>
+                    <th>统计项目</th>
+                    <th>查房总计</th>
+                    <th>医嘱点评总计</th>
+                    <th>会诊总计</th>
+                    <th>药物咨询总计</th>
+                    <th>ADR上报总计</th>
+                    <th>全院会诊总计</th>
+                </tr>
+            </thead>
+            <tbody id="summaryTbody">
+                <!-- 动态生成 -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // ================================================================
+        // ★★★ 云端同步配置（部署前必须填写 token）★★★
+        // 数据以一个 JSON 文件的形式，通过 GitHub API 存放在下面的
+        // 专用数据仓库中，所有打开本页面的人读写的都是同一份数据。
+        // ================================================================
+        const CLOUD_CONFIG = {
+            owner: "sonic86420",                  // 你的 GitHub 用户名
+            repo: "clinical-workload-data",       // 专用数据仓库名（需自行创建）
+            branch: "main",                       // 数据仓库分支
+            filePath: "workload-data.json",       // 数据文件名（首次保存时自动创建）
+            token: "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"                             // ←←← 在此引号内粘贴你的 Fine-grained Token
+        };
+
+        // 人员名单
+        const staff = ["滕智远", "胡珺", "蒲婷婷", "万亭池", "程瑛", "朱骥", "朱丹", "袁叶萍"];
+
+        // 表一的工作量字段
+        const workFields = ["visits", "reviews", "consultations", "drug_info", "adr", "hospital_consultation"];
+
+        // 表二的补充字段
+        const suppFields = ["complaints", "safety", "prescriptions", "adr_supp", "special_work", "coordination", "other", "today_focus"];
+
+        // 本地缓存 Key（仅作云端加载失败时的兜底，不是数据源）
+        const CACHE_KEY = "clinical_pharmacy_cloud_cache_v1";
+
+        const dateInput = document.getElementById("reportDate");
+        const saveStatus = document.getElementById("saveStatus");
+
+        // ------------------- 云端同步核心状态 -------------------
+        let cloudData = { workload: {}, supplement: {} }; // 当前权威数据
+        let cloudSha = null;                              // 云端文件当前版本号（GitHub 要求）
+        let syncTimer = null;                             // 防抖定时器
+        let isSyncing = false;                            // 是否正在同步
+        let pendingEdits = [];                            // 未同步到云端的本地修改队列
+        let lastEditedCell = null;                        // 最近编辑的单元格（保存成功后闪烁提示）
+
+        function isCloudConfigured() {
+            return CLOUD_CONFIG.token && CLOUD_CONFIG.token.length > 20 &&
+                   !CLOUD_CONFIG.token.includes("在此") && !CLOUD_CONFIG.token.includes("粘贴");
+        }
+
+        function ghApiUrl() {
+            return `https://api.github.com/repos/${CLOUD_CONFIG.owner}/${CLOUD_CONFIG.repo}/contents/${CLOUD_CONFIG.filePath}?ref=${CLOUD_CONFIG.branch}`;
+        }
+        function ghHeaders() {
+            return {
+                "Authorization": "Bearer " + CLOUD_CONFIG.token,
+                "Accept": "application/vnd.github+json"
+            };
+        }
+        function encodeBase64Utf8(str) {
+            const bytes = new TextEncoder().encode(str);
+            let bin = "";
+            bytes.forEach(b => { bin += String.fromCharCode(b); });
+            return btoa(bin);
+        }
+        function decodeBase64Utf8(b64) {
+            const bin = atob(b64.replace(/\s/g, ""));
+            const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+            return new TextDecoder("utf-8").decode(bytes);
+        }
+        function nowTimeStr() {
+            return new Date().toLocaleTimeString("zh-CN", { hour12: false });
+        }
+
+        // 从云端拉取最新数据（不存在文件则视为空数据）
+        async function fetchRemote() {
+            const res = await fetch(ghApiUrl(), { headers: ghHeaders(), cache: "no-store" });
+            if (res.status === 404) {
+                return { data: { workload: {}, supplement: {} }, sha: null };
+            }
+            if (res.status === 401 || res.status === 403) {
+                throw new Error("Token 无效或权限不足（HTTP " + res.status + "），请检查 CLOUD_CONFIG 中的 Token");
+            }
+            if (!res.ok) {
+                throw new Error("GitHub API 返回 " + res.status);
+            }
+            const json = await res.json();
+            let data;
+            try {
+                data = JSON.parse(decodeBase64Utf8(json.content));
+            } catch (e) {
+                throw new Error("云端数据文件格式异常，请用「导入数据恢复」修复");
+            }
+            if (!data.workload) data.workload = {};
+            if (!data.supplement) data.supplement = {};
+            return { data: data, sha: json.sha };
+        }
+
+        // 把本地未同步的修改合并到一份数据副本上
+        function applyPendingEdits(data) {
+            pendingEdits.forEach(edit => {
+                if (edit.type === "date") {
+                    if (data[edit.table]) delete data[edit.table][edit.date];
+                    return;
+                }
+                if (!data[edit.table]) data[edit.table] = {};
+                if (!data[edit.table][edit.date]) data[edit.table][edit.date] = {};
+                if (!data[edit.table][edit.date][edit.person]) data[edit.table][edit.date][edit.person] = {};
+                if (edit.value === null) {
+                    delete data[edit.table][edit.date][edit.person][edit.field];
+                } else {
+                    data[edit.table][edit.date][edit.person][edit.field] = edit.value;
+                }
+                if (Object.keys(data[edit.table][edit.date][edit.person]).length === 0) delete data[edit.table][edit.date][edit.person];
+                if (Object.keys(data[edit.table][edit.date]).length === 0) delete data[edit.table][edit.date];
+            });
+            return data;
+        }
+
+        // 核心：把数据写入云端（先取最新云端版本，合并本地修改后写回，避免互相覆盖）
+        async function performSync() {
+            if (!isCloudConfigured() || isSyncing || pendingEdits.length === 0) return;
+            isSyncing = true;
+            setSaveStatus("⏳ 正在保存到云端…", "#e67e22");
+            try {
+                const remote = await fetchRemote();
+                const merged = applyPendingEdits(JSON.parse(JSON.stringify(remote.data)));
+                const body = {
+                    message: "填报数据更新 " + new Date().toLocaleString("zh-CN", { hour12: false }),
+                    content: encodeBase64Utf8(JSON.stringify(merged)),
+                    branch: CLOUD_CONFIG.branch
+                };
+                if (remote.sha) body.sha = remote.sha;
+                const res = await fetch(ghApiUrl(), {
+                    method: "PUT",
+                    headers: Object.assign({}, ghHeaders(), { "Content-Type": "application/json" }),
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) {
+                    if (res.status === 409 || res.status === 422) throw new Error("版本冲突");
+                    throw new Error("保存失败（HTTP " + res.status + "）");
+                }
+                const rj = await res.json();
+                cloudSha = rj.content.sha;
+                cloudData = merged;
+                pendingEdits = [];
+                cacheLocal();
+                setSaveStatus("✓ 已保存到云端（" + nowTimeStr() + "），所有人均可见", "#27ae60");
+                if (lastEditedCell) {
+                    lastEditedCell.classList.remove("cell-saved");
+                    void lastEditedCell.offsetWidth; // 重启动画
+                    lastEditedCell.classList.add("cell-saved");
+                }
+                setTimeout(() => { if (!isSyncing) setSaveStatus("✓ 数据已同步，可直接填写", "#27ae60"); }, 4000);
+            } catch (e) {
+                setSaveStatus("✗ 保存失败：" + e.message + "，10 秒后自动重试", "#e74c3c");
+                setTimeout(() => { scheduleSave(0); }, 10000);
+            } finally {
+                isSyncing = false;
+            }
+        }
+
+        // 输入后防抖 1.2 秒再同步，避免每个字符都请求 GitHub
+        function scheduleSave(delay) {
+            if (!isCloudConfigured()) {
+                setSaveStatus("✗ 未配置 Token，数据无法共享！请按页面顶部说明完成部署", "#e74c3c");
+                return;
+            }
+            if (delay === undefined) delay = 1200;
+            setSaveStatus("⏳ 输入中，稍后自动保存…", "#e67e22");
+            clearTimeout(syncTimer);
+            syncTimer = setTimeout(performSync, delay);
+        }
+
+        function setSaveStatus(text, color) {
+            saveStatus.innerText = text;
+            saveStatus.style.color = color;
+        }
+
+        // 本地缓存（仅兜底）
+        function cacheLocal() {
+            try { localStorage.setItem(CACHE_KEY, JSON.stringify(cloudData)); } catch (e) {}
+        }
+        function getLocalCache() {
+            try {
+                const d = JSON.parse(localStorage.getItem(CACHE_KEY));
+                if (d && d.workload) return d;
+            } catch (e) {}
+            return { workload: {}, supplement: {} };
+        }
+
+        // ------------------- 页面渲染 -------------------
+        function getWeekday(dateStr) {
+            const days = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+            const d = new Date(dateStr);
+            return days[d.getDay()];
+        }
+        function isWeekend(dateStr) {
+            const d = new Date(dateStr);
+            return d.getDay() === 0 || d.getDay() === 6;
+        }
+
+        function onDateChange() {
+            loadDateData();
+            hideAndClearSummary();
+        }
+
+        function hideAndClearSummary() {
+            document.getElementById("summaryContainer").classList.remove("active");
+            document.getElementById("summaryTbody").innerHTML = "";
+        }
+
+        // 手动刷新：从云端拉最新数据并重绘
+        async function refreshFromCloud(showMsg) {
+            if (!isCloudConfigured()) return;
+            if (showMsg) setSaveStatus("⏳ 正在刷新…", "#e67e22");
+            try {
+                const remote = await fetchRemote();
+                cloudData = applyPendingEdits(remote.data);
+                cloudSha = remote.sha;
+                cacheLocal();
+                loadDateData();
+                if (showMsg) setSaveStatus("✓ 已刷新为云端最新数据（" + nowTimeStr() + "）", "#27ae60");
+            } catch (e) {
+                if (showMsg) setSaveStatus("✗ 刷新失败：" + e.message, "#e74c3c");
+            }
+        }
+
+        // 加载指定日期的数据并渲染两张表
+        function loadDateData() {
+            const date = dateInput.value;
+            if (!date) return;
+
+            document.getElementById("weekendAlert").style.display = isWeekend(date) ? "block" : "none";
+
+            const workData = cloudData.workload[date] || {};
+            const suppData = cloudData.supplement[date] || {};
+
+            // 1. 渲染表一：工作量明细
+            const tbody1 = document.getElementById("detailTbody");
+            let html1 = "";
+            staff.forEach((person, index) => {
+                const pData = workData[person] || {};
+                html1 += `<tr>`;
+                if (index === 0) {
+                    html1 += `<td rowspan="${staff.length}" style="font-weight:bold; background:#f8fafc;">${date}</td>`;
+                    html1 += `<td rowspan="${staff.length}" style="background:#f8fafc;">${getWeekday(date)}</td>`;
+                }
+                html1 += `<td style="font-weight:bold;">${person}</td>`;
+
+                workFields.forEach(key => {
+                    const val = pData[key] !== undefined ? pData[key] : "";
+                    html1 += `<td contenteditable="true" data-placeholder="0" data-date="${date}" data-person="${person}" data-field="${key}" data-table="workload" oninput="handleInput(this)">${val}</td>`;
+                });
+                html1 += `</tr>`;
+            });
+            tbody1.innerHTML = html1;
+            document.getElementById("detailTitle").innerText = `每日工作量明细表（${date} ${getWeekday(date)}）`;
+            document.getElementById("detailContainer").classList.add("active");
+
+            // 2. 渲染表二：交班补充上报
+            const tbody2 = document.getElementById("supplementTbody");
+            let html2 = "";
+            staff.forEach(person => {
+                const pData = suppData[person] || {};
+                html2 += `<tr>`;
+                html2 += `<td style="font-weight:bold; text-align:center;">${person}</td>`;
+
+                suppFields.forEach(key => {
+                    const val = pData[key] !== undefined ? pData[key] : "";
+                    const placeholder = "有则填写，无则不用填写";
+
+                    html2 += `<td contenteditable="true" data-placeholder="${placeholder}" data-date="${date}" data-person="${person}" data-field="${key}" data-table="supplement" oninput="handleInput(this)">${val}</td>`;
+                });
+                html2 += `</tr>`;
+            });
+            tbody2.innerHTML = html2;
+            document.getElementById("supplementTitle").innerText = `每日交班补充上报表（${date} ${getWeekday(date)}）`;
+            document.getElementById("supplementContainer").classList.add("active");
+        }
+
+        // 输入事件：登记修改 → 防抖 → 同步云端
+        function handleInput(element) {
+            const date = element.getAttribute("data-date");
+            const person = element.getAttribute("data-person");
+            const field = element.getAttribute("data-field");
+            const tableType = element.getAttribute("data-table");
+            let value = element.innerText.trim();
+
+            if (tableType === "workload" && value !== "" && isNaN(value)) {
+                alert("工作量请填写数字！");
+                element.innerText = "";
+                return;
+            }
+
+            // 同一个格子连续修改只保留最后一次
+            pendingEdits = pendingEdits.filter(e =>
+                !(e.type === "field" && e.table === tableType && e.date === date && e.person === person && e.field === field)
+            );
+            pendingEdits.push({
+                type: "field",
+                table: tableType, date: date, person: person, field: field,
+                value: (tableType === "workload") ? (value === "" ? null : Number(value)) : (value === "" ? null : value)
+            });
+
+            lastEditedCell = element;
+            scheduleSave();
+        }
+
+        // 生成全科工作量汇总
+        function generateSummary() {
+            let total = { visits: 0, reviews: 0, consultations: 0, drug_info: 0, adr: 0, hospital_consultation: 0 };
+
+            const workloadData = cloudData.workload || {};
+            for (const date in workloadData) {
+                for (const person in workloadData[date]) {
+                    workFields.forEach(key => {
+                        if (workloadData[date][person][key]) {
+                            total[key] += workloadData[date][person][key];
+                        }
+                    });
+                }
+            }
+
+            const tbody = document.getElementById("summaryTbody");
+            let html = `<tr>`;
+            html += `<td style="font-weight:bold; background:#f8fafc;">全科总工作量</td>`;
+            html += `<td>${total.visits}</td>`;
+            html += `<td>${total.reviews}</td>`;
+            html += `<td>${total.consultations}</td>`;
+            html += `<td>${total.drug_info}</td>`;
+            html += `<td>${total.adr}</td>`;
+            html += `<td>${total.hospital_consultation}</td>`;
+            html += `</tr>`;
+
+            tbody.innerHTML = html;
+            document.getElementById("summaryContainer").classList.add("active");
+            document.getElementById("summaryContainer").scrollIntoView({ behavior: "smooth" });
+        }
+
+        // 清空当前日期数据（直接写云端，所有人同步生效）
+        async function clearCurrentDate() {
+            const date = dateInput.value;
+            if (!date) return;
+
+            if (!confirm(`确定要清空 ${date} 的所有填报数据吗？（包括工作量表和补充上报表，对所有人生效）此操作不可恢复。`)) return;
+            if (!isCloudConfigured()) {
+                alert("未配置云端 Token，无法清空共享数据。请先按页面顶部说明完成部署。");
+                return;
+            }
+
+            setSaveStatus("⏳ 正在清空并同步云端…", "#e67e22");
+            try {
+                const remote = await fetchRemote();
+                const merged = remote.data;
+                if (merged.workload) delete merged.workload[date];
+                if (merged.supplement) delete merged.supplement[date];
+
+                const body = {
+                    message: `清空 ${date} 填报数据`,
+                    content: encodeBase64Utf8(JSON.stringify(merged)),
+                    branch: CLOUD_CONFIG.branch
+                };
+                if (remote.sha) body.sha = remote.sha;
+                const res = await fetch(ghApiUrl(), {
+                    method: "PUT",
+                    headers: Object.assign({}, ghHeaders(), { "Content-Type": "application/json" }),
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const rj = await res.json();
+                cloudSha = rj.content.sha;
+                cloudData = merged;
+                pendingEdits = pendingEdits.filter(e => e.date !== date);
+                cacheLocal();
+                loadDateData();
+                hideAndClearSummary();
+                setSaveStatus("✓ 已清空 " + date + " 的数据并同步云端", "#27ae60");
+            } catch (e) {
+                setSaveStatus("✗ 清空失败：" + e.message, "#e74c3c");
+            }
+        }
+
+        // 导出表格为Excel
+        function exportTable(type) {
+            let tableId = "";
+            let fileName = "";
+            let title = "";
+
+            if (type === "detail") {
+                tableId = "detailTable";
+                fileName = `临床药学每日工作量明细_${dateInput.value}.xls`;
+                title = document.getElementById("detailTitle").innerText;
+            } else if (type === "summary") {
+                tableId = "summaryTable";
+                fileName = `临床药学全科工作量汇总.xls`;
+                title = "全科工作量汇总统计表";
+            }
+
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const cloneTable = table.cloneNode(true);
+            const editables = cloneTable.querySelectorAll('[contenteditable="true"]');
+            editables.forEach(el => el.removeAttribute("contenteditable"));
+
+            const excelHTML = `
+                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta charset="UTF-8">
+                    <!--[if gte mso 9]>
+                    <xml>
+                        <x:ExcelWorkbook>
+                            <x:ExcelWorksheets>
+                                <x:ExcelWorksheet>
+                                    <x:Name>${title}</x:Name>
+                                    <x:WorksheetOptions>
+                                        <x:DisplayGridlines/>
+                                    </x:WorksheetOptions>
+                                </x:ExcelWorksheet>
+                            </x:ExcelWorksheets>
+                        </x:ExcelWorkbook>
+                    </xml>
+                    <![endif]-->
+                    <style>
+                        table { border-collapse: collapse; }
+                        th, td { border: 1px solid #000; padding: 4px; text-align: center; vertical-align: middle; }
+                        th { background-color: #f2f2f2; font-weight: bold; }
+                    </style>
+                </head>
+                <body>
+                    <h2>${title}</h2>
+                    ${cloneTable.outerHTML}
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob([excelHTML], { type: "application/vnd.ms-excel" });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 导出全量数据备份
+        function exportBackup() {
+            if (Object.keys(cloudData.workload).length === 0 && Object.keys(cloudData.supplement).length === 0) {
+                alert("当前没有任何填报数据，无法导出备份。");
+                return;
+            }
+            const blob = new Blob([JSON.stringify(cloudData, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `临床药学全量数据备份_${new Date().toLocaleDateString().replace(/\//g, "-")}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 导入数据备份（整包覆盖云端）
+        function importBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (typeof importedData !== "object") {
+                        throw new Error("数据格式不正确");
+                    }
+                    if (!importedData.workload) importedData.workload = {};
+                    if (!importedData.supplement) importedData.supplement = {};
+
+                    if (confirm("导入将【覆盖云端】的所有数据（对所有人生效），确定继续吗？")) {
+                        setSaveStatus("⏳ 正在导入并同步云端…", "#e67e22");
+                        const remote = await fetchRemote();
+                        const body = {
+                            message: "导入备份数据覆盖",
+                            content: encodeBase64Utf8(JSON.stringify(importedData)),
+                            branch: CLOUD_CONFIG.branch
+                        };
+                        if (remote.sha) body.sha = remote.sha;
+                        const res = await fetch(ghApiUrl(), {
+                            method: "PUT",
+                            headers: Object.assign({}, ghHeaders(), { "Content-Type": "application/json" }),
+                            body: JSON.stringify(body)
+                        });
+                        if (!res.ok) throw new Error("HTTP " + res.status);
+                        const rj = await res.json();
+                        cloudSha = rj.content.sha;
+                        cloudData = importedData;
+                        pendingEdits = [];
+                        cacheLocal();
+                        setSaveStatus("✓ 备份导入成功，已同步云端", "#27ae60");
+                        loadDateData();
+                    }
+                } catch (err) {
+                    alert("导入失败：" + (err.message || "文件格式不正确，请选择由本系统导出的备份文件。"));
+                    setSaveStatus("✗ 导入失败", "#e74c3c");
+                }
+                event.target.value = "";
+            };
+            reader.readAsText(file);
+        }
+
+        // 每 60 秒静默检查一次云端更新（正被编辑或本地有未保存内容时跳过）
+        async function pollRemote() {
+            if (!isCloudConfigured() || isSyncing || pendingEdits.length > 0) return;
+            const ae = document.activeElement;
+            if (ae && ae.getAttribute && ae.getAttribute("contenteditable") === "true") return;
+            try {
+                const remote = await fetchRemote();
+                if (JSON.stringify(remote.data) !== JSON.stringify(cloudData)) {
+                    cloudData = remote.data;
+                    cloudSha = remote.sha;
+                    cacheLocal();
+                    loadDateData();
+                    setSaveStatus("🔄 已自动同步其他人的更新（" + nowTimeStr() + "）", "#3498db");
+                    setTimeout(() => { if (!isSyncing && pendingEdits.length === 0) setSaveStatus("✓ 数据已同步，可直接填写", "#27ae60"); }, 5000);
+                }
+            } catch (e) { /* 静默失败，不打扰填写 */ }
+        }
+
+        // 初始化
+        async function init() {
+            initDate();
+            if (isCloudConfigured()) {
+                setSaveStatus("⏳ 正在从云端加载数据…", "#e67e22");
+                try {
+                    const remote = await fetchRemote();
+                    cloudData = remote.data;
+                    cloudSha = remote.sha;
+                    cacheLocal();
+                    setSaveStatus("✓ 云端数据加载成功，可直接填写", "#27ae60");
+                } catch (e) {
+                    cloudData = getLocalCache();
+                    setSaveStatus("✗ 云端加载失败（" + e.message + "），当前显示本地缓存", "#e74c3c");
+                }
+                setInterval(pollRemote, 60000);
+            } else {
+                cloudData = getLocalCache();
+                document.getElementById("setupBanner").style.display = "block";
+                setSaveStatus("✗ 未配置 Token，数据仅保存在本机", "#e74c3c");
+            }
+            loadDateData();
+        }
+
+        function initDate() {
+            const today = new Date();
+            const defaultDate = new Date("2026-09-28");
+            if (today > defaultDate) {
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, "0");
+                const dd = String(today.getDate()).padStart(2, "0");
+                dateInput.value = `${yyyy}-${mm}-${dd}`;
+            } else {
+                dateInput.value = "2026-09-28";
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
